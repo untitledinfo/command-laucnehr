@@ -82,4 +82,26 @@ public final class Http {
             }
         }
     }
+
+    /** Same as download(), but retries transient failures a few times with a short backoff. */
+    public static void downloadWithRetry(String url, Path dest, int attempts, ProgressListener listener)
+            throws IOException, InterruptedException {
+        IOException last = null;
+        for (int i = 1; i <= attempts; i++) {
+            try {
+                download(url, dest, listener);
+                return;
+            } catch (IOException e) {
+                last = e;
+                try {
+                    Files.deleteIfExists(dest);
+                } catch (IOException ignored) {
+                }
+                if (i < attempts) {
+                    Thread.sleep(500L * i);
+                }
+            }
+        }
+        throw last != null ? last : new IOException("Download failed: " + url);
+    }
 }

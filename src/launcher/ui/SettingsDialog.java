@@ -61,7 +61,7 @@ public class SettingsDialog extends JDialog {
         loaderCol.setOpaque(false);
         JLabel loaderLabel = new JLabel("Mod Loader:");
         loaderLabel.setForeground(Theme.TEXT);
-        loaderCombo = new JComboBox<>(new String[]{"None", "Fabric"});
+        loaderCombo = new JComboBox<>(new String[]{"None", "Fabric", "Forge"});
         loaderCombo.setSelectedItem(config.getString("modLoader", "None"));
         loaderCol.add(loaderLabel, BorderLayout.NORTH);
         loaderCol.add(loaderCombo, BorderLayout.CENTER);

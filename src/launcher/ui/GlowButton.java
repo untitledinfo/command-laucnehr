@@ -66,6 +66,20 @@ public class GlowButton extends JButton {
         this(text, color, false, false);
     }
 
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        if (!hoverTimer.isRunning()) hoverTimer.start();
+        if (pulseTimer != null && !pulseTimer.isRunning()) pulseTimer.start();
+    }
+
+    @Override
+    public void removeNotify() {
+        super.removeNotify();
+        hoverTimer.stop();
+        if (pulseTimer != null) pulseTimer.stop();
+    }
+
     private float targetRadius = 14f;
 
     @Override

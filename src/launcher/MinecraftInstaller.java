@@ -69,10 +69,26 @@ public class MinecraftInstaller {
         return out;
     }
 
-    /**
-     * Installs a vanilla version: version json, client jar, libraries + natives, assets.
-     * Returns the parsed version json map (also handed to the launcher).
-     */
+    /** Deletes an installed version's folder (and its per-version profile dir) entirely. */
+    public void deleteVersion(String versionId) throws IOException {
+        deleteRecursive(mcDir.resolve("versions").resolve(versionId));
+        deleteRecursive(mcDir.resolve("profiles").resolve(versionId));
+    }
+
+    private void deleteRecursive(Path path) throws IOException {
+        if (!Files.exists(path)) return;
+        try (var walk = Files.walk(path)) {
+            walk.sorted(java.util.Comparator.reverseOrder())
+                    .forEach(p -> {
+                        try {
+                            Files.delete(p);
+                        } catch (IOException ignored) {
+                        }
+                    });
+        }
+    }
+
+
     public Map<String, Object> installVersion(String versionId) throws Exception {
         status("Resolving version " + versionId + "...");
         List<Map<String, Object>> versions = fetchVersionList();
@@ -110,10 +126,11 @@ public class MinecraftInstaller {
         Map<String, Object> downloads = Json.asObject(versionJson.get("downloads"));
         Map<String, Object> clientDownload = Json.asObject(downloads.get("client"));
         String clientUrl = Json.asString(clientDownload.get("url"), null);
+        String clientSha1 = Json.asString(clientDownload.get("sha1"), null);
         Path clientJar = versionDir.resolve(versionId + ".jar");
-        if (clientUrl != null && !Files.exists(clientJar)) {
+        if (clientUrl != null && !Sha1Util.matches(clientJar, clientSha1)) {
             status("Downloading client jar...");
-            Http.download(clientUrl, clientJar, (done, total) -> progress("Client jar", done, total));
+            Http.downloadWithRetry(clientUrl, clientJar, 3, (done, total) -> progress("Client jar", done, total));
         }
 
         // --- libraries + natives ---
@@ -133,11 +150,12 @@ public class MinecraftInstaller {
             if (artifact.get("url") != null) {
                 String url = Json.asString(artifact.get("url"), null);
                 String path = Json.asString(artifact.get("path"), null);
+                String sha1 = Json.asString(artifact.get("sha1"), null);
                 if (url != null && path != null) {
                     Path dest = librariesDir.resolve(path);
-                    if (!Files.exists(dest)) {
+                    if (!Sha1Util.matches(dest, sha1)) {
                         status("Downloading library " + libIndex + "/" + libraries.size());
-                        Http.download(url, dest, (done, total) -> progress("Libraries", done, total));
+                        Http.downloadWithRetry(url, dest, 3, (done, total) -> progress("Libraries", done, total));
                     }
                 }
             }
@@ -155,11 +173,12 @@ public class MinecraftInstaller {
                         Map<String, Object> classifierEntry = Json.asObject(classifierEntryObj);
                         String url = Json.asString(classifierEntry.get("url"), null);
                         String path = Json.asString(classifierEntry.get("path"), null);
+                        String sha1 = Json.asString(classifierEntry.get("sha1"), null);
                         if (url != null && path != null) {
                             Path dest = librariesDir.resolve(path);
-                            if (!Files.exists(dest)) {
+                            if (!Sha1Util.matches(dest, sha1)) {
                                 status("Downloading natives...");
-                                Http.download(url, dest, (done, total) -> progress("Natives", done, total));
+                                Http.downloadWithRetry(url, dest, 3, (done, total) -> progress("Natives", done, total));
                             }
                             extractNatives(dest, nativesDir);
                         }
@@ -192,19 +211,37 @@ public class MinecraftInstaller {
             Map<String, Object> objects = Json.asObject(indexJson.get("objects"));
             Path objectsDir = mcDir.resolve("assets").resolve("objects");
 
+            boolean virtual = Json.asBool(indexJson.get("virtual"), false);
+            boolean mapToResources = Json.asBool(indexJson.get("map_to_resources"), false);
+            Path virtualDir = mcDir.resolve("assets").resolve("virtual").resolve(assetIndexId);
+            Path resourcesDir = mcDir.resolve("resources"); // legacy game dir layout
+
             int total = objects.size();
             int i = 0;
             for (Map.Entry<String, Object> entry : objects.entrySet()) {
                 i++;
+                String assetPath = entry.getKey();
                 Map<String, Object> obj = Json.asObject(entry.getValue());
                 String hash = Json.asString(obj.get("hash"), null);
                 if (hash == null) continue;
                 String prefix = hash.substring(0, 2);
                 Path dest = objectsDir.resolve(prefix).resolve(hash);
-                if (!Files.exists(dest)) {
+                if (!Sha1Util.matches(dest, hash)) {
                     String url = "https://resources.download.minecraft.net/" + prefix + "/" + hash;
-                    Http.download(url, dest, null);
+                    Http.downloadWithRetry(url, dest, 3, null);
                 }
+
+                // Very old versions (pre-1.7) expect assets laid out by their
+                // real path rather than by hash - materialize that layout too.
+                if (virtual) {
+                    Path virtualFile = virtualDir.resolve(assetPath);
+                    copyIfMissing(dest, virtualFile);
+                }
+                if (mapToResources) {
+                    Path resourceFile = resourcesDir.resolve(assetPath);
+                    copyIfMissing(dest, resourceFile);
+                }
+
                 if (i % 25 == 0 || i == total) {
                     progress("Assets " + i + "/" + total, i, total);
                 }
@@ -212,6 +249,16 @@ public class MinecraftInstaller {
         }
 
         status("Install complete for " + versionId);
+    }
+
+    private void copyIfMissing(Path source, Path dest) {
+        try {
+            if (Files.exists(source) && !Files.exists(dest)) {
+                Files.createDirectories(dest.getParent());
+                Files.copy(source, dest);
+            }
+        } catch (IOException ignored) {
+        }
     }
 
     private void extractNatives(Path jarFile, Path targetDir) throws IOException {

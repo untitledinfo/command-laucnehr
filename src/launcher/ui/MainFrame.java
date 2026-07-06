@@ -4,6 +4,7 @@ import launcher.Account;
 import launcher.AccountManager;
 import launcher.Config;
 import launcher.FabricSupport;
+import launcher.ForgeSupport;
 import launcher.MinecraftInstaller;
 import launcher.MinecraftLauncher;
 import launcher.ServerPinger;
@@ -281,9 +282,48 @@ public class MainFrame extends JFrame {
         screenshots.setAlignmentX(Component.LEFT_ALIGNMENT);
         screenshots.addActionListener(e -> openProfileFolder("screenshots"));
         page.add(screenshots);
+        page.add(Box.createVerticalStrut(6));
+
+        JButton openRoot = new JButton("Open .minecraft Folder");
+        openRoot.setAlignmentX(Component.LEFT_ALIGNMENT);
+        openRoot.addActionListener(e -> {
+            try {
+                java.nio.file.Files.createDirectories(config.getMinecraftDir());
+                Desktop.getDesktop().open(config.getMinecraftDir().toFile());
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Could not open folder: " + ex.getMessage());
+            }
+        });
+        page.add(openRoot);
+        page.add(Box.createVerticalStrut(16));
+
+        JButton deleteVersion = new JButton("Delete Selected Version");
+        deleteVersion.setForeground(Theme.ERROR);
+        deleteVersion.setAlignmentX(Component.LEFT_ALIGNMENT);
+        deleteVersion.addActionListener(e -> deleteSelectedVersion());
+        page.add(deleteVersion);
 
         page.add(Box.createVerticalGlue());
         return page;
+    }
+
+    private void deleteSelectedVersion() {
+        String versionId = (String) versionCombo.getSelectedItem();
+        if (versionId == null || versionId.contains("No installed")) {
+            JOptionPane.showMessageDialog(this, "Please select a version first.");
+            return;
+        }
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Delete \"" + versionId + "\" and its profile data? This can't be undone.",
+                "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) return;
+        try {
+            new MinecraftInstaller(config.getMinecraftDir(), null).deleteVersion(versionId);
+            loadInstalledVersions();
+            appendConsole("[Launcher] Deleted version " + versionId + "\n");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Could not delete version: " + ex.getMessage());
+        }
     }
 
     private JPanel buildConsolePanel() {
@@ -451,10 +491,27 @@ public class MainFrame extends JFrame {
                             launchId = FabricSupport.install(config.getMinecraftDir(), versionId, loaders.get(0),
                                     (text, done, total) -> SwingUtilities.invokeLater(() -> progressLabel.setText(text)));
                         }
+                    } else if (modLoader.equals("Forge")) {
+                        String existing = findExistingForgeVersion(versionId);
+                        if (existing != null) {
+                            launchId = existing;
+                        } else {
+                            SwingUtilities.invokeLater(() -> progressLabel.setText("Looking up Forge build..."));
+                            String forgeVersion = ForgeSupport.recommendedForgeVersion(versionId);
+                            if (forgeVersion == null) {
+                                throw new java.io.IOException("No Forge build found for " + versionId);
+                            }
+                            String javaExe = MinecraftLauncher.resolveJavaExecutable(config.getString("javaPath", ""));
+                            launchId = ForgeSupport.install(config.getMinecraftDir(), versionId, forgeVersion, javaExe,
+                                    (text, done, total) -> SwingUtilities.invokeLater(() -> {
+                                        progressLabel.setText(text);
+                                        appendConsole(text + "\n");
+                                    }));
+                        }
                     }
-                    MinecraftLauncher launcher = new MinecraftLauncher(config);
+                    MinecraftLauncher mcLauncher = new MinecraftLauncher(config);
                     String server = serverField.getText().trim();
-                    return launcher.launch(launchId, account, server.isEmpty() ? null : server,
+                    return mcLauncher.launch(launchId, account, server.isEmpty() ? null : server,
                             line -> SwingUtilities.invokeLater(() -> appendConsole(line + "\n")));
                 } catch (Exception ex) {
                     error = ex.getMessage();
@@ -466,6 +523,7 @@ public class MainFrame extends JFrame {
                 setControlsEnabled(true);
                 progressLabel.setVisible(false);
                 progressBar.setVisible(false);
+                loadInstalledVersions();
                 if (error != null) {
                     appendConsole("[ERROR] " + error + "\n");
                     JOptionPane.showMessageDialog(MainFrame.this, error, "Launch Error", JOptionPane.ERROR_MESSAGE);
@@ -474,12 +532,23 @@ public class MainFrame extends JFrame {
         }.execute();
     }
 
+    private String findExistingForgeVersion(String mcVersion) {
+        MinecraftInstaller installer = new MinecraftInstaller(config.getMinecraftDir(), null);
+        for (String id : installer.getInstalledVersions()) {
+            if (id.startsWith(mcVersion) && id.toLowerCase().contains("forge")) {
+                return id;
+            }
+        }
+        return null;
+    }
+
     private void setControlsEnabled(boolean enabled) {
         playButton.setEnabled(enabled);
         versionCombo.setEnabled(enabled);
     }
 
     private void loadInstalledVersions() {
+        String previousSelection = (String) versionCombo.getSelectedItem();
         MinecraftInstaller installer = new MinecraftInstaller(config.getMinecraftDir(), null);
         List<String> installed = installer.getInstalledVersions();
         Vector<String> items = new Vector<>();
@@ -490,6 +559,9 @@ public class MainFrame extends JFrame {
         }
         versionCombo.setModel(new DefaultComboBoxModel<>(items));
         versionCombo.setEnabled(!installed.isEmpty());
+        if (previousSelection != null && items.contains(previousSelection)) {
+            versionCombo.setSelectedItem(previousSelection);
+        }
     }
 
     private void updateAccountLabel() {

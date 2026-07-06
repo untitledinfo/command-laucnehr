@@ -77,12 +77,6 @@ public class FabricSupport {
     }
 
     private static String mavenCoordToPath(String coord) {
-        // group:artifact:version[:classifier]
-        String[] parts = coord.split(":");
-        String group = parts[0].replace('.', '/');
-        String artifact = parts[1];
-        String version = parts[2];
-        String classifier = parts.length > 3 ? "-" + parts[3] : "";
-        return group + "/" + artifact + "/" + version + "/" + artifact + "-" + version + classifier + ".jar";
+        return MavenUtil.coordToPath(coord);
     }
 }

@@ -102,7 +102,7 @@ public class MinecraftLauncher {
         cmd.add("--gameDir"); cmd.add(profileDir.toAbsolutePath().toString());
         cmd.add("--assetsDir"); cmd.add(mcDir.resolve("assets").toAbsolutePath().toString());
         cmd.add("--assetIndex"); cmd.add(assetIndexId);
-        cmd.add("--uuid"); cmd.add(account.uuid.replace("-", ""));
+        cmd.add("--uuid"); cmd.add(account.uuid);
         cmd.add("--accessToken"); cmd.add(account.accessToken == null || account.accessToken.isBlank() ? "0" : account.accessToken);
         cmd.add("--userType"); cmd.add(account.type.equals("msa") ? "msa" : "legacy");
         cmd.add("--versionType"); cmd.add("release");
@@ -158,15 +158,11 @@ public class MinecraftLauncher {
                 continue;
             }
 
-            // Fabric-style {name, url} libraries have no "downloads" block
+            // Fabric/Forge-style {name, url} libraries have no "downloads" block
             String name = Json.asString(lib.get("name"), null);
             if (name != null) {
-                String[] parts = name.split(":");
-                if (parts.length >= 3) {
-                    String group = parts[0].replace('.', '/');
-                    String artifactId = parts[1];
-                    String version = parts[2];
-                    String rel = group + "/" + artifactId + "/" + version + "/" + artifactId + "-" + version + ".jar";
+                String rel = MavenUtil.coordToPath(name);
+                if (rel != null) {
                     Path full = librariesDir.resolve(rel);
                     if (Files.exists(full)) out.add(full.toString());
                 }
@@ -174,11 +170,16 @@ public class MinecraftLauncher {
         }
     }
 
-    private String findJavaExecutable() {
+    public static String resolveJavaExecutable(String configuredPath) {
+        if (configuredPath != null && !configuredPath.isBlank()) return configuredPath;
         String javaHome = System.getProperty("java.home");
         String exe = System.getProperty("os.name").toLowerCase().contains("win") ? "java.exe" : "java";
         Path candidate = Path.of(javaHome, "bin", exe);
         if (Files.exists(candidate)) return candidate.toString();
-        return "java"; // hope it's on PATH
+        return "java";
+    }
+
+    private String findJavaExecutable() {
+        return resolveJavaExecutable(null);
     }
 }
