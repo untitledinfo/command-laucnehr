@@ -24,6 +24,16 @@ public final class Theme {
     public static final Color SUCCESS = new Color(0x34, 0xd3, 0x99);
     public static final Color ERROR = new Color(0xf8, 0x71, 0x71);
 
+    // Launch-pill greens (matches the "LAUNCH" capsule look)
+    public static final Color LAUNCH_GREEN = new Color(0x3d, 0xd6, 0x68);
+    public static final Color LAUNCH_GREEN_2 = new Color(0x1f, 0xa6, 0x53);
+
+    // Top-bar / icon-rail accent chips
+    public static final Color CHIP_1 = new Color(0xf5, 0xa6, 0x23);
+    public static final Color CHIP_2 = new Color(0xe0, 0x3a, 0x3a);
+    public static final Color CHIP_3 = new Color(0x2b, 0xc4, 0x7e);
+    public static final Color CHIP_4 = new Color(0x5b, 0x6a, 0xe0);
+
     public static final Font FONT_TITLE = new Font("Segoe UI", Font.BOLD, 20);
     public static final Font FONT_SUBTITLE = new Font("Segoe UI", Font.PLAIN, 12);
     public static final Font FONT_BODY = new Font("Segoe UI", Font.PLAIN, 13);

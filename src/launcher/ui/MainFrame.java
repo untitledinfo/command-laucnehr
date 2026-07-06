@@ -27,9 +27,15 @@ public class MainFrame extends JFrame {
     private FadePanel homeFade;
     private FadePanel instancesFade;
 
-    private SidebarButton navHome;
-    private SidebarButton navInstances;
+    private IconRailButton navHome;
+    private IconRailButton navInstances;
+    private IconRailButton navAccounts;
+    private IconRailButton navSettings;
+    private IconRailButton navConsole;
     private JLabel accountLabel;
+    private JLabel avatarBubble;
+    private DefaultListModel<Account> playersModel;
+    private JList<Account> playersList;
 
     private JComboBox<String> versionCombo;
     private JTextField serverField;
@@ -72,7 +78,9 @@ public class MainFrame extends JFrame {
         JPanel root = new JPanel(new BorderLayout());
         root.setBackground(Theme.BG_DARKEST);
 
-        root.add(buildSidebar(), BorderLayout.WEST);
+        root.add(buildTopBar(), BorderLayout.NORTH);
+        root.add(buildIconRail(), BorderLayout.WEST);
+        root.add(buildPlayersPanel(), BorderLayout.EAST);
 
         cards.setOpaque(false);
         homeFade = new FadePanel(buildHomePage());
@@ -89,63 +97,225 @@ public class MainFrame extends JFrame {
         switchPage("home", navHome);
     }
 
-    private JPanel buildSidebar() {
-        JPanel sidebar = new JPanel();
-        sidebar.setPreferredSize(new Dimension(200, 0));
-        sidebar.setBackground(Theme.BG_PANEL);
-        sidebar.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Theme.BORDER));
-        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
+    private JPanel buildTopBar() {
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.setPreferredSize(new Dimension(0, 56));
+        bar.setBackground(Theme.BG_PANEL);
+        bar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Theme.BORDER));
 
-        JLabel brand = new JLabel("\u26A1 COMMAND");
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 14, 0));
+        left.setOpaque(false);
+        JLabel brand = new JLabel("\u26A1 COMMAND LAUNCHER");
         brand.setForeground(Theme.ACCENT);
-        brand.setFont(Theme.FONT_BRAND);
-        brand.setBorder(new EmptyBorder(20, 16, 0, 0));
-        brand.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(brand);
+        brand.setFont(Theme.FONT_BOLD);
+        left.add(brand);
 
-        JLabel sub = new JLabel("LAUNCHER");
-        sub.setForeground(Theme.TEXT_DIM);
-        sub.setFont(Theme.FONT_SUBTITLE);
-        sub.setBorder(new EmptyBorder(0, 16, 20, 0));
-        sub.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(sub);
+        // Small colored chips, purely decorative flair (mirrors the row of
+        // game/community badges in the reference design).
+        for (Color c : new Color[]{Theme.CHIP_1, Theme.CHIP_2, Theme.CHIP_3, Theme.CHIP_4}) {
+            left.add(chipDot(c));
+        }
+        bar.add(left, BorderLayout.WEST);
 
-        navHome = new SidebarButton("  \uD83C\uDFE0  Home");
-        navInstances = new SidebarButton("  \uD83E\uDDE9  Instances");
-        SidebarButton navAccounts = new SidebarButton("  \uD83D\uDC64  Accounts");
-        SidebarButton navSettings = new SidebarButton("  \u2699  Settings");
-        SidebarButton navConsole = new SidebarButton("  \uD83D\uDCBB  Console");
+        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        right.setOpaque(false);
+        right.setBorder(new EmptyBorder(0, 0, 0, 14));
+
+        avatarBubble = new JLabel("?", SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                Theme.antialias(g2);
+                g2.setPaint(Theme.accentGradient(getWidth(), getHeight()));
+                g2.fillOval(0, 0, getWidth() - 1, getHeight() - 1);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        avatarBubble.setForeground(Color.WHITE);
+        avatarBubble.setFont(Theme.FONT_BOLD);
+        avatarBubble.setPreferredSize(new Dimension(30, 30));
+        avatarBubble.setOpaque(false);
+        right.add(avatarBubble);
+
+        accountLabel = new JLabel("No account selected");
+        accountLabel.setForeground(Theme.TEXT);
+        accountLabel.setFont(Theme.FONT_SUBTITLE);
+        right.add(accountLabel);
+
+        JButton settingsBtn = flatIconButton("\u2699", "Settings");
+        settingsBtn.addActionListener(e -> openSettings());
+        right.add(settingsBtn);
+
+        bar.add(right, BorderLayout.EAST);
+        return bar;
+    }
+
+    private JComponent chipDot(Color c) {
+        JPanel dot = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                Theme.antialias(g2);
+                g2.setColor(c);
+                g2.fillOval(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
+        dot.setOpaque(false);
+        dot.setPreferredSize(new Dimension(16, 16));
+        return dot;
+    }
+
+    private JButton flatIconButton(String icon, String tooltip) {
+        JButton b = new JButton(icon);
+        b.setToolTipText(tooltip);
+        b.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
+        b.setForeground(Theme.TEXT_DIM);
+        b.setContentAreaFilled(false);
+        b.setBorderPainted(false);
+        b.setFocusPainted(false);
+        b.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return b;
+    }
+
+    private JPanel buildIconRail() {
+        JPanel rail = new JPanel();
+        rail.setPreferredSize(new Dimension(64, 0));
+        rail.setBackground(Theme.BG_PANEL);
+        rail.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Theme.BORDER));
+        rail.setLayout(new BoxLayout(rail, BoxLayout.Y_AXIS));
+        rail.add(Box.createVerticalStrut(16));
+
+        navHome = new IconRailButton("\uD83C\uDFE0", "Home");
+        navInstances = new IconRailButton("\uD83E\uDDE9", "Instances");
+        navAccounts = new IconRailButton("\uD83D\uDC64", "Accounts");
+        navSettings = new IconRailButton("\u2699", "Settings");
+        navConsole = new IconRailButton("\uD83D\uDCBB", "Console");
 
         ButtonGroup group = new ButtonGroup();
         group.add(navHome);
         group.add(navInstances);
 
-        for (SidebarButton b : new SidebarButton[]{navHome, navInstances, navAccounts, navSettings, navConsole}) {
-            b.setAlignmentX(Component.LEFT_ALIGNMENT);
-            b.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
-            sidebar.add(b);
+        for (IconRailButton b : new IconRailButton[]{navHome, navInstances, navAccounts, navSettings, navConsole}) {
+            b.setAlignmentX(Component.CENTER_ALIGNMENT);
+            rail.add(b);
+            rail.add(Box.createVerticalStrut(8));
         }
         navHome.setSelected(true);
 
         navHome.addActionListener(e -> switchPage("home", navHome));
         navInstances.addActionListener(e -> switchPage("instances", navInstances));
-        navAccounts.addActionListener(e -> openAccounts());
-        navSettings.addActionListener(e -> openSettings());
+        navAccounts.addActionListener(e -> {
+            openAccounts();
+            navAccounts.setSelected(false);
+        });
+        navSettings.addActionListener(e -> {
+            openSettings();
+            navSettings.setSelected(false);
+        });
         navConsole.addActionListener(e -> toggleConsole());
 
-        sidebar.add(Box.createVerticalGlue());
-
-        accountLabel = new JLabel("<html>No account selected</html>");
-        accountLabel.setForeground(Theme.TEXT_DIM);
-        accountLabel.setFont(Theme.FONT_SUBTITLE);
-        accountLabel.setBorder(new EmptyBorder(0, 16, 20, 10));
-        accountLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        sidebar.add(accountLabel);
-
-        return sidebar;
+        rail.add(Box.createVerticalGlue());
+        return rail;
     }
 
-    private void switchPage(String name, SidebarButton btn) {
+    private JPanel buildPlayersPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setPreferredSize(new Dimension(190, 0));
+        panel.setBackground(Theme.BG_PANEL);
+        panel.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, Theme.BORDER));
+
+        JLabel header = new JLabel("PLAYERS");
+        header.setForeground(Theme.TEXT_DIM);
+        header.setFont(Theme.FONT_SUBTITLE);
+        header.setBorder(new EmptyBorder(14, 14, 8, 14));
+        panel.add(header, BorderLayout.NORTH);
+
+        playersModel = new DefaultListModel<>();
+        playersList = new JList<>(playersModel);
+        playersList.setOpaque(false);
+        playersList.setCellRenderer(new PlayerCellRenderer());
+        playersList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    Account a = playersList.getSelectedValue();
+                    if (a != null) {
+                        accountManager.setActive(a.uuid);
+                        updateAccountLabel();
+                        refreshPlayersPanel();
+                    }
+                }
+            }
+        });
+        JScrollPane scroll = new JScrollPane(playersList);
+        scroll.setOpaque(false);
+        scroll.getViewport().setOpaque(false);
+        scroll.setBorder(null);
+        panel.add(scroll, BorderLayout.CENTER);
+
+        JButton addAccount = new JButton("+ Add Account");
+        addAccount.setBorder(new EmptyBorder(8, 10, 12, 10));
+        addAccount.setContentAreaFilled(false);
+        addAccount.setForeground(Theme.ACCENT_SOFT);
+        addAccount.setFocusPainted(false);
+        addAccount.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        addAccount.addActionListener(e -> openAccounts());
+        panel.add(addAccount, BorderLayout.SOUTH);
+
+        refreshPlayersPanel();
+        return panel;
+    }
+
+    private void refreshPlayersPanel() {
+        if (playersModel == null) return;
+        playersModel.clear();
+        for (Account a : accountManager.list()) {
+            playersModel.addElement(a);
+        }
+        playersList.repaint();
+    }
+
+    /** Renders each account as a small "friend row": avatar dot + name + status. */
+    private class PlayerCellRenderer extends JPanel implements ListCellRenderer<Account> {
+        private final JLabel dot = new JLabel("\u25CF");
+        private final JLabel name = new JLabel();
+        private final JLabel status = new JLabel();
+
+        PlayerCellRenderer() {
+            setOpaque(false);
+            setLayout(new BorderLayout(8, 0));
+            setBorder(new EmptyBorder(6, 14, 6, 10));
+            JPanel textCol = new JPanel();
+            textCol.setOpaque(false);
+            textCol.setLayout(new BoxLayout(textCol, BoxLayout.Y_AXIS));
+            name.setForeground(Theme.TEXT);
+            name.setFont(Theme.FONT_BODY);
+            status.setForeground(Theme.TEXT_DIM);
+            status.setFont(Theme.FONT_SUBTITLE);
+            textCol.add(name);
+            textCol.add(status);
+            add(dot, BorderLayout.WEST);
+            add(textCol, BorderLayout.CENTER);
+        }
+
+        @Override
+        public Component getListCellRendererComponent(JList<? extends Account> list, Account value, int index,
+                                                        boolean isSelected, boolean cellHasFocus) {
+            Account active = accountManager.getActive();
+            boolean isActive = active != null && active.uuid.equals(value.uuid);
+            dot.setForeground(isActive ? Theme.SUCCESS : Theme.TEXT_DIM);
+            name.setText(value.name);
+            status.setText(isActive ? "Selected \u00b7 " + (value.type.equals("msa") ? "Microsoft" : "Offline")
+                    : (value.type.equals("msa") ? "Microsoft" : "Offline"));
+            setBackground(isSelected ? Theme.BG_PANEL_LIGHT : null);
+            setOpaque(isSelected);
+            return this;
+        }
+    }
+
+    private void switchPage(String name, IconRailButton btn) {
         cardLayout.show(cards, name);
         btn.setSelected(true);
         if (name.equals("home")) homeFade.playFadeIn();
@@ -156,88 +326,142 @@ public class MainFrame extends JFrame {
         JPanel page = new JPanel();
         page.setOpaque(false);
         page.setLayout(new BoxLayout(page, BoxLayout.Y_AXIS));
-        page.setBorder(new EmptyBorder(30, 36, 20, 36));
+        page.setBorder(new EmptyBorder(24, 30, 20, 30));
+
+        page.add(buildHeroPanel());
+        page.add(Box.createVerticalStrut(22));
+
+        JLabel newsTitle = new JLabel("LATEST NEWS");
+        newsTitle.setForeground(Theme.TEXT_DIM);
+        newsTitle.setFont(Theme.FONT_SUBTITLE);
+        newsTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        page.add(newsTitle);
+        page.add(Box.createVerticalStrut(10));
+
+        JPanel newsRow = new JPanel(new GridLayout(1, 3, 14, 0));
+        newsRow.setOpaque(false);
+        newsRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        newsRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 130));
+        newsRow.add(new NewsCard("\uD83C\uDD95", "What's New in v3.2",
+                "Crash-on-open fix, safer Microsoft sign-in, and more.", Theme.ACCENT, Theme.ACCENT_2));
+        newsRow.add(new NewsCard("\uD83D\uDC65", "Join the Community",
+                "Add a server address above and hit Ping to check status.", Theme.CHIP_3, Theme.LAUNCH_GREEN_2));
+        newsRow.add(new NewsCard("\uD83E\uDDE9", "Manage Instances",
+                "Install Fabric/Forge versions from the Instances tab.", Theme.CHIP_4, Theme.ACCENT));
+        page.add(newsRow);
+
+        page.add(Box.createVerticalGlue());
+        return page;
+    }
+
+    /** Dark gradient hero card containing the server-join row and the big LAUNCH pill. */
+    private JPanel buildHeroPanel() {
+        JPanel hero = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                Theme.antialias(g2);
+                int w = getWidth();
+                int h = getHeight();
+                GradientPaint gp = new GradientPaint(0, 0, new Color(0x17, 0x17, 0x24), w, h, new Color(0x0e, 0x0e, 0x16));
+                g2.setPaint(gp);
+                g2.fillRoundRect(0, 0, w, h, 20, 20);
+                // a couple of soft accent glows in the corners, evoking the
+                // starfield/character backdrop from the reference design
+                g2.setPaint(new RadialGradientPaint(w * 0.85f, h * 0.2f, Math.max(w, h) * 0.6f,
+                        new float[]{0f, 1f},
+                        new Color[]{new Color(Theme.ACCENT.getRed(), Theme.ACCENT.getGreen(), Theme.ACCENT.getBlue(), 40),
+                                new Color(0, 0, 0, 0)}));
+                g2.fillRoundRect(0, 0, w, h, 20, 20);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        hero.setOpaque(false);
+        hero.setLayout(new BoxLayout(hero, BoxLayout.Y_AXIS));
+        hero.setBorder(new EmptyBorder(22, 26, 26, 26));
+        hero.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hero.setMaximumSize(new Dimension(Integer.MAX_VALUE, 300));
 
         JLabel title = new JLabel("Welcome back");
         title.setForeground(Theme.TEXT);
         title.setFont(Theme.FONT_TITLE);
         title.setAlignmentX(Component.LEFT_ALIGNMENT);
-        page.add(title);
+        hero.add(title);
 
-        JLabel subtitle = new JLabel("Pick a version, hop on a server, and hit play.");
+        JLabel subtitle = new JLabel("Pick a version, hop on a server, and hit launch.");
         subtitle.setForeground(Theme.TEXT_DIM);
         subtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        page.add(subtitle);
-        page.add(Box.createVerticalStrut(20));
-
-        JPanel serverCard = card();
-        serverCard.setLayout(new BoxLayout(serverCard, BoxLayout.Y_AXIS));
-        JLabel serverTitle = new JLabel("Join Server (optional)");
-        serverTitle.setForeground(Theme.TEXT);
-        serverTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        serverCard.add(serverTitle);
-        serverCard.add(Box.createVerticalStrut(8));
+        hero.add(subtitle);
+        hero.add(Box.createVerticalStrut(16));
 
         JPanel serverRow = new JPanel(new BorderLayout(8, 0));
         serverRow.setOpaque(false);
+        serverRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        serverRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        JLabel serverLabel = new JLabel("Server:");
+        serverLabel.setForeground(Theme.TEXT_DIM);
         serverField = new JTextField();
         serverField.setBackground(Theme.BG_PANEL_LIGHT);
         serverField.setForeground(Theme.TEXT);
         serverField.setCaretColor(Theme.TEXT);
         JButton pingButton = new JButton("Ping");
         pingButton.addActionListener(this::onPing);
+        serverRow.add(serverLabel, BorderLayout.WEST);
         serverRow.add(serverField, BorderLayout.CENTER);
         serverRow.add(pingButton, BorderLayout.EAST);
-        serverRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        serverCard.add(serverRow);
+        hero.add(serverRow);
 
         serverStatusLabel = new JLabel(" ");
         serverStatusLabel.setForeground(Theme.TEXT_DIM);
+        serverStatusLabel.setFont(Theme.FONT_SUBTITLE);
         serverStatusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        serverCard.add(Box.createVerticalStrut(6));
-        serverCard.add(serverStatusLabel);
+        serverStatusLabel.setBorder(new EmptyBorder(4, 0, 0, 0));
+        hero.add(serverStatusLabel);
 
-        page.add(serverCard);
-        page.add(Box.createVerticalStrut(20));
+        hero.add(Box.createVerticalGlue());
 
-        JPanel playRow = new JPanel(new BorderLayout(14, 0));
-        playRow.setOpaque(false);
-        playRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        playRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+        JPanel launchRow = new JPanel(new BorderLayout(16, 0));
+        launchRow.setOpaque(false);
+        launchRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        launchRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
 
-        JPanel versionCol = new JPanel(new BorderLayout());
-        versionCol.setOpaque(false);
-        JLabel versionLabel = new JLabel("Version");
-        versionLabel.setForeground(Theme.TEXT);
         versionCombo = new JComboBox<>();
-        versionCol.add(versionLabel, BorderLayout.NORTH);
-        versionCol.add(versionCombo, BorderLayout.CENTER);
-        playRow.add(versionCol, BorderLayout.CENTER);
+        versionCombo.setMaximumSize(new Dimension(220, 34));
+        versionCombo.setPreferredSize(new Dimension(220, 34));
+        JPanel versionWrap = new JPanel(new BorderLayout());
+        versionWrap.setOpaque(false);
+        versionWrap.add(versionCombo, BorderLayout.SOUTH);
+        launchRow.add(versionWrap, BorderLayout.WEST);
 
-        playButton = new GlowButton("PLAY", Theme.ACCENT, true, true);
-        playButton.setPreferredSize(new Dimension(180, 60));
+        // Big rounded "LAUNCH" pill button, matching the reference design's
+        // capsule-shaped play button.
+        playButton = new GlowButton("\u25B6  LAUNCH", Theme.LAUNCH_GREEN, Theme.LAUNCH_GREEN_2, true, true, 999);
+        playButton.setPreferredSize(new Dimension(260, 58));
         playButton.setFont(new Font("Segoe UI", Font.BOLD, 18));
         playButton.addActionListener(this::onPlay);
-        playRow.add(playButton, BorderLayout.EAST);
+        JPanel launchWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        launchWrap.setOpaque(false);
+        launchWrap.add(playButton);
+        launchRow.add(launchWrap, BorderLayout.EAST);
 
-        page.add(playRow);
-        page.add(Box.createVerticalStrut(14));
+        hero.add(launchRow);
+        hero.add(Box.createVerticalStrut(10));
 
         progressLabel = new JLabel(" ");
         progressLabel.setForeground(Theme.TEXT_DIM);
         progressLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         progressLabel.setVisible(false);
-        page.add(progressLabel);
+        hero.add(progressLabel);
 
         progressBar = new ShimmerProgressBar();
         progressBar.setAlignmentX(Component.LEFT_ALIGNMENT);
-        progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 22));
+        progressBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
         progressBar.setVisible(false);
-        page.add(Box.createVerticalStrut(6));
-        page.add(progressBar);
+        hero.add(Box.createVerticalStrut(6));
+        hero.add(progressBar);
 
-        page.add(Box.createVerticalGlue());
-        return page;
+        return hero;
     }
 
     private JComponent buildInstancesPage() {
@@ -568,10 +792,13 @@ public class MainFrame extends JFrame {
         Account acc = accountManager.getActive();
         if (acc != null) {
             String type = acc.type.equals("msa") ? "MSA" : "Offline";
-            accountLabel.setText("<html>Logged in as<br><b>" + acc.name + "</b> (" + type + ")</html>");
+            accountLabel.setText(acc.name + " (" + type + ")");
+            avatarBubble.setText(acc.name.substring(0, 1).toUpperCase());
         } else {
-            accountLabel.setText("<html>No account selected.<br>Open Accounts to add one.</html>");
+            accountLabel.setText("No account selected");
+            avatarBubble.setText("?");
         }
+        refreshPlayersPanel();
     }
 
     private void appendConsole(String text) {

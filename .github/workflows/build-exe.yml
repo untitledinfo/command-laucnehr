@@ -58,7 +58,7 @@ jobs:
             --main-class launcher.LauncherApp \
             --name "CommandLauncher" \
             --app-version "1.0.0" \
-            --vendor "firepdx" \
+            --vendor "Firepdx" \
             --description "Command Launcher - a Minecraft launcher" \
             --dest dist \
             --win-dir-chooser \
