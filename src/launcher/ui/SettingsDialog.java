@@ -144,10 +144,11 @@ public class SettingsDialog extends JDialog {
 
     private void deleteRecursive(Path path) throws Exception {
         if (!Files.exists(path)) return;
-        Files.walk(path)
-                .sorted(java.util.Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete);
+        try (var walk = Files.walk(path)) {
+            walk.sorted(java.util.Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+        }
     }
 
     private void saveValues() {

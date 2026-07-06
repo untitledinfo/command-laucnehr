@@ -94,6 +94,8 @@ public class AccountsDialog extends JDialog {
         if (onChanged != null) onChanged.run();
     }
 
+    private JDialog deviceCodeDialog;
+
     private void addMicrosoftAccount() {
         MicrosoftAuth auth = new MicrosoftAuth();
         new SwingWorker<Account, Void>() {
@@ -112,6 +114,20 @@ public class AccountsDialog extends JDialog {
             }
 
             protected void done() {
+                // Close the "waiting for sign-in" dialog now that polling has
+                // finished, whether it succeeded, failed, or was cancelled.
+                // Previously this dialog was a blocking JOptionPane, so even
+                // after a successful login the account list/label would not
+                // update until the user manually clicked OK on it.
+                if (deviceCodeDialog != null) {
+                    deviceCodeDialog.dispose();
+                    deviceCodeDialog = null;
+                }
+
+                if (isCancelled()) {
+                    return;
+                }
+
                 if (error != null) {
                     JOptionPane.showMessageDialog(AccountsDialog.this, "Microsoft login failed: " + error,
                             "Error", JOptionPane.ERROR_MESSAGE);
@@ -135,6 +151,7 @@ public class AccountsDialog extends JDialog {
 
     private void showDeviceCodeDialog(MicrosoftAuth.DeviceCode dc) {
         JPanel panel = new JPanel(new GridLayout(0, 1, 4, 4));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 16, 12, 16));
         panel.add(new JLabel("Open this link in your browser:"));
         JTextField urlField = new JTextField(dc.verificationUri);
         urlField.setEditable(false);
@@ -153,7 +170,20 @@ public class AccountsDialog extends JDialog {
         });
         panel.add(openBrowser);
         panel.add(new JLabel("Waiting for you to finish signing in..."));
-        JOptionPane.showMessageDialog(this, panel, "Microsoft Login", JOptionPane.PLAIN_MESSAGE);
+
+        JButton cancel = new JButton("Cancel");
+        panel.add(cancel);
+
+        // Non-modal so it can close itself automatically once login
+        // succeeds/fails/times out, instead of blocking the EDT until the
+        // user clicks a button.
+        deviceCodeDialog = new JDialog(this, "Microsoft Login", false);
+        cancel.addActionListener(e -> deviceCodeDialog.dispose());
+        deviceCodeDialog.setContentPane(panel);
+        deviceCodeDialog.pack();
+        deviceCodeDialog.setLocationRelativeTo(this);
+        deviceCodeDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        deviceCodeDialog.setVisible(true);
     }
 
     private void removeSelected() {

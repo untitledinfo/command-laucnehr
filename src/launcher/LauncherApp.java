@@ -34,7 +34,6 @@ public class LauncherApp {
         Timer timer = new Timer(1200, e -> {
             splash.dispose();
             MainFrame frame = new MainFrame();
-            frame.setOpacity(0f);
             frame.setVisible(true);
             fadeIn(frame);
         });
@@ -42,7 +41,28 @@ public class LauncherApp {
         timer.start();
     }
 
+    /**
+     * Animates a window's opacity from 0 -> 1, but only if the window
+     * actually supports per-pixel translucency in its current state.
+     * Decorated AWT windows (e.g. a normal JFrame with a title bar, like
+     * MainFrame) CANNOT have their opacity set below 1.0f -
+     * Window.setOpacity() throws IllegalComponentStateException in that
+     * case. Calling this on a decorated frame used to crash the app right
+     * after the splash screen closed, so the main window never appeared.
+     * We now detect that case and simply skip the fade instead of crashing.
+     */
     private static void fadeIn(Window window) {
+        boolean decorated = (window instanceof Frame) && !((Frame) window).isUndecorated();
+        GraphicsConfiguration gc = window.getGraphicsConfiguration();
+        boolean translucencySupported = gc != null
+                && gc.getDevice().isWindowTranslucencySupported(GraphicsDevice.WindowTranslucency.TRANSLUCENT);
+
+        if (decorated || !translucencySupported) {
+            window.setOpacity(1f);
+            return;
+        }
+
+        window.setOpacity(0f);
         final float[] opacity = {0f};
         Timer timer = new Timer(15, null);
         timer.addActionListener(e -> {

@@ -55,8 +55,8 @@ public class MinecraftInstaller {
         List<String> out = new ArrayList<>();
         Path versionsDir = mcDir.resolve("versions");
         if (!Files.isDirectory(versionsDir)) return out;
-        try {
-            Files.list(versionsDir).forEach(dir -> {
+        try (var stream = Files.list(versionsDir)) {
+            stream.forEach(dir -> {
                 if (Files.isDirectory(dir)) {
                     String id = dir.getFileName().toString();
                     if (Files.exists(dir.resolve(id + ".json"))) {

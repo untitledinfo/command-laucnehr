@@ -5,6 +5,29 @@ by Lunar Client / Feather Client: glowing/pulsing controls, an animated
 sidebar, shimmering progress bars, and smooth fade transitions — all built
 with the standard JDK (Swing + `java.net.http`), no external jars required.
 
+## v3.2 changelog (bug fixes)
+
+**Fixed:**
+- **Critical: the launcher never opened.** `LauncherApp` called
+  `frame.setOpacity(0f)` on `MainFrame`, but `MainFrame` is a normal
+  *decorated* `JFrame` (title bar, close/minimize buttons). Java throws
+  `IllegalComponentStateException` if you set opacity below 1.0 on a
+  decorated window, so the app crashed the instant the splash screen closed
+  and the main window was never shown. The fade-in now detects whether the
+  window can actually support translucency and skips the animation instead
+  of crashing when it can't.
+- **Microsoft sign-in could appear to hang.** The "waiting for you to sign
+  in" dialog was a blocking modal `JOptionPane`, so even after a successful
+  login finished in the background, the account list wouldn't update until
+  the user manually clicked OK on that dialog. It's now a non-modal dialog
+  that closes itself automatically as soon as sign-in succeeds, fails, or
+  times out, and it has a Cancel button.
+- **Directory handle leaks**: `getInstalledVersions()` and the Settings
+  "Clear Launcher Cache" cleanup opened directory streams
+  (`Files.list`/`Files.walk`) without closing them, which can leave file
+  handles open (worst on Windows, where that can block a later delete of the
+  same folder). Both now use try-with-resources.
+
 ## v3.1 changelog (bug fixes + new features)
 
 **Fixed:**
