@@ -29,9 +29,25 @@ jobs:
       - name: Build
         run: npm run build
 
+<<<<<<< HEAD
       - name: Upload build output
+=======
+      - name: Dist
+        run: npm run dist
+
+      - name: Verify Build Output
+        run: |
+          ls -la
+          ls -la .next
+
+      - name: Upload Build
+>>>>>>> c3bf1ee085fc68c3c4a3a5bbdde0664f78a604e1
         uses: actions/upload-artifact@v4
         with:
           name: next-build
           path: .next
+<<<<<<< HEAD
           retention-days: 7
+=======
+          include-hidden-files: true
+>>>>>>> c3bf1ee085fc68c3c4a3a5bbdde0664f78a604e1
