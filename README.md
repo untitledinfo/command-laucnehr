@@ -58,7 +58,26 @@ Versions, Mods, Resource Packs, Shaders, Servers, Worlds, Downloads, Accounts, N
 4. Add Microsoft OAuth (Azure AD app registration required) and offline account handling for the Accounts screen.
 5. Everything past that (cloud sync, community, cosmetics, AI features) — see the separate roadmap doc for phased sequencing.
 
-## Notes
+## Building the .exe
+
+This sandbox can't produce the actual binary — Electron's runtime download and Windows packaging (NSIS via `electron-builder`) both need things this environment doesn't have network/OS access to. Two working options:
+
+**Option A — build it yourself on Windows:**
+```bash
+npm install
+npm run electron:build
+```
+Output lands in `dist/Command Launcher Setup <version>.exe`.
+
+**Option B — GitHub Actions (recommended, matches your existing CI/CD pattern):**
+A workflow is included at `.github/workflows/build.yml`. Push this repo to GitHub and it will:
+1. Build the Next.js static export
+2. Package it with `electron-builder` on a real `windows-latest` runner (produces the `.exe`) and `ubuntu-latest` (produces the `.AppImage`)
+3. Upload both as workflow artifacts you can download from the Actions tab
+
+Push a tag like `v0.1.0` to trigger a release build, or just push to `main` for a normal build.
+
+
 
 - Fonts currently fall back to system fonts (`Inter Tight`/`Inter`/`Segoe UI`) since this environment can't fetch Google Fonts at build time. Swap in real font files via `next/font/local` whenever convenient — the CSS variables (`--font-display`, `--font-body`, `--font-mono`) are already wired up in `globals.css`.
 - `window:maximize` in `electron/main.js` toggles maximize/unmaximize — no separate restore icon yet, which is a fine v1 tradeoff.
