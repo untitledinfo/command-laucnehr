@@ -1,4 +1,4 @@
-name: Build
+name: Build EXE
 
 on:
   push:
@@ -6,14 +6,11 @@ on:
       - main
     tags:
       - "v*"
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-windows:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -24,52 +21,19 @@ jobs:
         with:
           node-version: 24
 
-      - name: Show project files
-        run: |
-          pwd
-          ls -la
-
-      - name: Verify package.json
-        run: |
-          if [ ! -f package.json ]; then
-            echo "::error::package.json not found in repository root."
-            exit 1
-          fi
-
       - name: Install dependencies
         run: npm install
 
-      - name: Type Check
-        run: npm run type-check --if-present
-
-      - name: Lint
-        run: npm run lint --if-present
-
-      - name: Build
+      - name: Build application
         run: npm run build
 
-      - name: Verify build output
-        run: |
-          if [ -d ".next" ]; then
-            echo "Next.js build found."
-            ls -la .next
-          elif [ -d "dist" ]; then
-            echo "Dist build found."
-            ls -la dist
-          elif [ -d "build" ]; then
-            echo "Build directory found."
-            ls -la build
-          else
-            echo "::error::No build output found (.next, dist, or build)."
-            exit 1
-          fi
+      - name: Build Windows EXE
+        run: npm run dist
 
-      - name: Upload artifact
+      - name: Upload EXE
         uses: actions/upload-artifact@v4
         with:
-          name: build-output
+          name: windows-exe
           path: |
-            .next
-            dist
-            build
-          if-no-files-found: ignore
+            dist/*.exe
+            dist/*.msi
