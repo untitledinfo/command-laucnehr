@@ -12,20 +12,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 24
 
       - name: Install dependencies
         run: npm install
 
-      - name: Build
+      - name: Type Check
+        run: npx tsc --noEmit
+        continue-on-error: true
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Build Next.js
         run: npm run build
 
-      - name: Upload build
+      - name: Verify build output
+        run: |
+          if [ ! -d ".next" ]; then
+            echo "::error::.next folder not found!"
+            exit 1
+          fi
+          ls -la .next
+
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
           name: next-build
           path: .next
+          if-no-files-found: error
+          include-hidden-files: true
