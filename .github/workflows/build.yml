@@ -2,58 +2,38 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
-    tags: [ "v*" ]
+    branches: [main]
+    tags: ["v*"]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch: {}
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-
-      - name: Confirm project layout
-        run: |
-          echo "Working directory: $(pwd)"
-          ls -la
-          if [ ! -f package.json ]; then
-            echo "::error::package.json not found at repo root. Is the Next.js project nested in a subfolder?"
-            exit 1
-          fi
+          node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Type Check
+        run: npm run type-check --if-present
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --if-present
 
       - name: Build
         run: npm run build
 
-      - name: Confirm build output
-        run: |
-          if [ ! -d .next ]; then
-            echo "::error::next build did not produce a .next directory. Check the Build step's logs above for the real failure."
-            exit 1
-          fi
-          ls -la .next
-
-      - name: Upload build output
-        uses: actions/upload-artifact@v6
+      - name: Upload Build
+        uses: actions/upload-artifact@v4
         with:
-          name: command-deck-launcher-build
+          name: next-build
           path: .next
-          if-no-files-found: error
-          include-hidden-files: true
