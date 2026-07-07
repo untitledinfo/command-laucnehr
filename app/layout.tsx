@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ToastProvider } from "@/components/ToastProvider";
 
 export const metadata: Metadata = {
-  title: "Command Deck — Minecraft Launcher",
-  description:
-    "A mission-control themed Minecraft launcher dashboard: quick play, mods, friends, and news in one console.",
+  title: "Command Launcher",
+  description: "PGC Command Launcher UI",
 };
 
 export default function RootLayout({
@@ -14,11 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-mode="light">
-      <body>
-        <div className="scan-bg" aria-hidden="true" />
-        <ToastProvider>{children}</ToastProvider>
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }
