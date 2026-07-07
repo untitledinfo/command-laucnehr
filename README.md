@@ -1,185 +1,74 @@
-# Command Launcher (Java Edition)
+# Command Launcher (Electron + Vue 3 + TypeScript)
 
-A pure-Java, dependency-free Minecraft launcher with a dark neon UI inspired
-by Lunar Client / Feather Client: glowing/pulsing controls, an animated
-sidebar, shimmering progress bars, and smooth fade transitions — all built
-with the standard JDK (Swing + `java.net.http`), no external jars required.
+Full port of the Java/Swing "Command Launcher" to Electron + Vue 3 + TypeScript,
+same dark neon/glass theme as the original (`ui/Theme.java` colors carried over
+1:1 into `src/theme.css`).
 
-## v3.2 changelog (bug fixes)
+## What was ported
 
-**Fixed:**
-- **Critical: the launcher never opened.** `LauncherApp` called
-  `frame.setOpacity(0f)` on `MainFrame`, but `MainFrame` is a normal
-  *decorated* `JFrame` (title bar, close/minimize buttons). Java throws
-  `IllegalComponentStateException` if you set opacity below 1.0 on a
-  decorated window, so the app crashed the instant the splash screen closed
-  and the main window was never shown. The fade-in now detects whether the
-  window can actually support translucency and skips the animation instead
-  of crashing when it can't.
-- **Microsoft sign-in could appear to hang.** The "waiting for you to sign
-  in" dialog was a blocking modal `JOptionPane`, so even after a successful
-  login finished in the background, the account list wouldn't update until
-  the user manually clicked OK on that dialog. It's now a non-modal dialog
-  that closes itself automatically as soon as sign-in succeeds, fails, or
-  times out, and it has a Cancel button.
-- **Directory handle leaks**: `getInstalledVersions()` and the Settings
-  "Clear Launcher Cache" cleanup opened directory streams
-  (`Files.list`/`Files.walk`) without closing them, which can leave file
-  handles open (worst on Windows, where that can block a later delete of the
-  same folder). Both now use try-with-resources.
+Every piece of launcher logic from the Java version was rewritten faithfully
+in the Electron **main process** (`electron/lib/`), not reimplemented from
+scratch:
 
-## v3.1 changelog (bug fixes + new features)
+| Java file | TS port | Notes |
+|---|---|---|
+| `Config.java` | `lib/configStore.ts` | Same schema; stored in Electron's userData dir instead of the working directory |
+| `Account.java` / `AccountManager.java` | `lib/configStore.ts` | Offline UUID uses the identical MD5 name-UUID algorithm Mojang/Java use |
+| `MicrosoftAuth.java` | `lib/microsoftAuth.ts` | Same MS device-code → Xbox Live → XSTS → Minecraft Services chain and URLs |
+| `MinecraftInstaller.java` | `lib/minecraftInstaller.ts` | Same manifest/client-jar/library/asset/native download pipeline, SHA-1 verified |
+| `FabricSupport.java` | `lib/fabricSupport.ts` | Same Fabric meta API + maven coordinate resolution |
+| `ForgeSupport.java` | `lib/forgeSupport.ts` | Same "run the official installer headlessly, diff versions/" strategy |
+| `MinecraftLauncher.java` | `lib/minecraftLauncher.ts` | Same classpath/natives/args resolution and `java` process spawn |
+| `ServerPinger.java` | `lib/serverPinger.ts` | Same raw Server List Ping TCP handshake, no external library |
+| `RuleUtil.java` / `MavenUtil.java` / `Sha1Util.java` | `lib/ruleUtil.ts` / `lib/mavenUtil.ts` / `lib/sha1Util.ts` | Line-for-line logic ports |
 
-**Fixed:**
-- **Critical launch bug**: `--uuid` was stripping dashes before passing it to
-  the game, which breaks `UUID.fromString()` inside Minecraft and silently
-  fails to launch. Dashes are now preserved.
-- **Corrupted/partial downloads never healed themselves** — files were only
-  checked for *existence*, so a broken half-downloaded jar would stay broken
-  forever. Client jar, libraries, natives, and asset objects are now all
-  verified against their official SHA-1 hash and automatically re-downloaded
-  if they don't match, with 3 retries and backoff on transient network
-  failures.
-- **Animation timer leak** — the glow/shimmer/sidebar `javax.swing.Timer`s
-  kept ticking forever even after their dialog was closed. They now start/
-  stop with the component's actual on-screen lifecycle (`addNotify`/
-  `removeNotify`).
-- **Old Beta/Alpha versions were silently unselectable** — the version
-  browser only exposed Release/Snapshot checkboxes even though the manifest
-  includes older version types; both are now selectable, plus a live search
-  box was added.
-- **Legacy versions (pre-1.7) would launch with missing textures/sounds** —
-  those versions expect assets laid out by real path (`assets/virtual/...`)
-  or under a `resources/` folder in the game directory, not by hash. The
-  installer now materializes both legacy layouts when the asset index
-  requests them (`virtual` / `map_to_resources`).
-- Maven-coordinate → path resolution (used by Fabric/Forge libraries) didn't
-  handle classifier suffixes correctly; extracted into a shared, correct
-  `MavenUtil` helper used everywhere.
+The Swing UI (`ui/MainFrame.java` and friends) was rebuilt as Vue 3 views/components:
 
-**New features:**
-- **Forge support.** Rather than reimplementing Forge's own patching
-  pipeline, Command Launcher downloads the official Forge installer for the
-  selected Minecraft version's recommended (or latest) build and runs it
-  headlessly (`--installClient`), then detects the resulting version
-  automatically. Enable it via Settings → Mod Loader → Forge.
-- **Delete Version** button on the Instances page (removes the version + its
-  profile folder, with a confirmation prompt).
-- **Open .minecraft Folder** shortcut on the Instances page.
-- **Search box** in the version installer, in addition to the type filters.
-- Version selection is now preserved across list refreshes instead of
-  resetting to the top item.
+- `src/App.vue` — custom frameless title bar + icon rail (was `MainFrame`'s top bar/icon rail)
+- `src/views/Home.vue` — hero panel, server ping, version picker, LAUNCH button, news row
+- `src/views/Mods.vue` — folder shortcuts + installed version management (was the mods page)
+- `src/views/Console.vue` — live game stdout/stderr, save log
+- `src/views/Settings.vue` — RAM slider, Java path, JVM args, `.minecraft` dir, default server
+- `src/components/AccountsDialog.vue` — offline + Microsoft sign-in (was `AccountsDialog.java`)
+- `src/components/VersionInstallDialog.vue` — manifest browser + vanilla/Fabric/Forge install (was `VersionInstallDialog.java`)
+- `src/components/GlowButton.vue` / `NewsCard.vue` — matching the original's glow-pill launch button and news cards
 
----
+Renderer never touches the filesystem, network, or child processes directly —
+all of that lives in the main process and is exposed through a narrow,
+typed `window.launcherApi` surface via `electron/preload.ts` (contextBridge,
+`contextIsolation: true`, `nodeIntegration: false`).
 
-## Requirements
+## Before you run this
 
-- JDK 17 or newer (uses `java.net.http.HttpClient`, records-free code so it
-  also works fine on 17 LTS; tested against OpenJDK 21).
-- No Maven/Gradle needed — it's plain `javac`/`java`.
+Set your own Azure AD app client ID in `electron/lib/microsoftAuth.ts`
+(`CLIENT_ID`) — same requirement as the original Java version's comment in
+`MicrosoftAuth.java`. Register a "Public client/native" app at
+https://portal.azure.com; no client secret or redirect URI needed for the
+device-code flow.
 
-## Build & run
+## Development
 
 ```bash
-chmod +x build.sh run.sh
-./run.sh
+npm install
+npm run build:electron   # compile the main process once
+npm run dev              # start Vite dev server (renderer)
+# in a second terminal:
+npx cross-env VITE_DEV_SERVER_URL=http://localhost:5173 npx electron .
 ```
 
-`run.sh` compiles into `out/` (if not already built) and launches
-`launcher.LauncherApp`.
+## Production build
 
-## What's implemented
-
-- **Vanilla installs**: fetches the real Mojang version manifest, downloads
-  the client jar, all required libraries (filtered by OS rules), extracts
-  natives, and downloads the asset index + asset objects — all verified by
-  SHA-1 with automatic retry/repair.
-- **Fabric support**: optional, via Settings → Mod Loader → Fabric. Resolves
-  the newest Fabric loader for the selected Minecraft version and merges its
-  libraries/main class with the vanilla install.
-- **Forge support**: optional, via Settings → Mod Loader → Forge. Downloads
-  and runs the official Forge installer headlessly against your `.minecraft`
-  folder, then auto-detects the version it created.
-- **Accounts**:
-  - Offline accounts (username-only, using Mojang's own offline-UUID
-    algorithm) — works immediately, no setup needed.
-  - Microsoft accounts via the OAuth **device code flow** → Xbox Live →
-    XSTS → Minecraft Services chain. **You must register your own Azure AD
-    application** to use this (see below) — Microsoft does not allow
-    third-party apps to reuse the official launcher's client ID.
-- **Server ping**: a from-scratch implementation of the vanilla Server List
-  Ping protocol (handshake + status request), no external library.
-- **Launching**: builds the full Java command (classpath, natives path,
-  memory flags, and the `--username/--uuid/--accessToken/...` game
-  arguments) and streams stdout/stderr into an in-app console.
-- **UI**: sidebar navigation (Home / Instances / Accounts / Settings /
-  Console), a glowing ambient-pulsing PLAY button, a shimmering progress
-  bar, and fade-in transitions between pages — all done with plain
-  `Graphics2D`/`Timer`, no animation library.
-
-## Setting up Microsoft login (optional)
-
-Offline accounts work out of the box. If you want real Microsoft/Xbox
-sign-in:
-
-1. Go to https://portal.azure.com → **App registrations** → **New
-   registration**.
-2. Choose **"Accounts in any organizational directory and personal
-   Microsoft accounts"**.
-3. Under **Authentication**, add a platform of type **"Mobile and desktop
-   applications"** (this enables the device code flow) — no redirect URI is
-   required for device code login.
-4. Copy the **Application (client) ID** and paste it into
-   `src/launcher/MicrosoftAuth.java`, replacing
-   `PUT-YOUR-AZURE-APP-CLIENT-ID-HERE`.
-5. Rebuild (`./build.sh`).
-
-This is a one-time step required by Microsoft for *any* third-party
-launcher, not something specific to this project.
-
-## Known limitations / good next steps
-
-- **Forge on 1.17+** may not fully launch — very new Forge versions rely on
-  Java's module-system flags (`--add-opens`, etc.) that live in the modern
-  `arguments.jvm` schema, which this launcher doesn't parse (it always passes
-  a fixed, broadly-compatible set of flags/args instead of the full
-  conditional schema). Forge 1.7–1.16 should work fine. Fabric is unaffected
-  since its Knot launch process doesn't need those flags.
-- The modern per-argument `rules` conditions in `arguments.game` are not
-  parsed; instead the launcher always passes the standard set of flags
-  (`--username`, `--version`, `--uuid`, etc.) that every current Minecraft
-  version accepts. This covers the vast majority of versions but very old
-  legacy versions (pre-1.6) used a different, non-standard argument style
-  and aren't guaranteed to work.
-- Cracked/offline accounts obviously can't join servers with
-  `online-mode=true`.
-
-## Project layout
-
+```bash
+npm run build       # builds renderer (vite) + main process (tsc)
+npm run dist:win     # packages a Windows .exe installer via electron-builder
 ```
-src/launcher/
-  Json.java              tiny dependency-free JSON parser/serializer
-  Http.java               HttpClient-based GET/POST/download helpers (+ retry)
-  Config.java              launcher_config.json load/save
-  RuleUtil.java            OS + library "rules" evaluation
-  MavenUtil.java           maven coordinate -> relative path resolution
-  Sha1Util.java            SHA-1 hashing/verification for downloaded files
-  MinecraftInstaller.java  version manifest, client jar, libs, natives, assets
-  FabricSupport.java       Fabric loader resolution + install
-  ForgeSupport.java        downloads/runs the official Forge installer
-  Account.java / AccountManager.java   account model + persistence
-  MicrosoftAuth.java       device-code -> XBL -> XSTS -> Minecraft auth chain
-  MinecraftLauncher.java   builds + runs the java launch command
-  ServerPinger.java        raw Server List Ping protocol
-  LauncherApp.java         entry point + splash/fade-in
-  ui/
-    Theme.java             color palette + paint helpers
-    GlowButton.java        neon glow / pulsing button
-    ShimmerProgressBar.java animated gradient progress bar
-    SidebarButton.java      animated nav toggle
-    FadePanel.java          fade-in page transitions
-    MainFrame.java          main window (sidebar + Home/Instances/Console)
-    VersionInstallDialog.java
-    AccountsDialog.java
-    SettingsDialog.java
-```
+
+Add real icons under `build/` first — see `build/ICONS_README.txt`.
+
+## CI
+
+`.github/workflows/build-exe.yml` builds a signed-less Windows `.exe`
+installer on every push to `main` / tag `v*`, uploads it as a workflow
+artifact, and attaches it to the GitHub Release when the tag starts with `v`
+— same trigger behavior as the original jpackage-based workflow, just backed
+by `electron-builder` instead of `jpackage`/WiX.
