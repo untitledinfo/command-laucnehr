@@ -1,60 +1,63 @@
 {
-  "name": "command-launcher",
-  "version": "1.0.0",
-  "description": "Command Launcher - a Lunar/Feather-styled Minecraft launcher",
-  "private": true,
-  "main": "dist-electron/main.js",
-  "scripts": {
-    "dev": "vite",
-    "build:renderer": "vue-tsc --noEmit && vite build",
-    "build:electron": "tsc -p electron/tsconfig.json",
-    "build": "npm run build:renderer && npm run build:electron",
-    "dist": "npm run build && electron-builder",
-    "dist:win": "npm run build && electron-builder --win",
-    "electron": "electron ."
-  },
-  "dependencies": {
-    "adm-zip": "^0.5.10",
-    "pinia": "^2.1.7",
-    "vue": "^3.4.21",
-    "vue-router": "^4.3.0"
-  },
-  "devDependencies": {
-    "@types/adm-zip": "^0.5.5",
-    "@types/node": "^20.12.7",
-    "@vitejs/plugin-vue": "^5.0.4",
-    "electron": "^30.0.1",
-    "electron-builder": "^24.13.3",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.8",
-    "vue-tsc": "^2.0.11"
-  },
-  "build": {
-    "appId": "com.commandlauncher.app",
-    "productName": "Command Launcher",
-    "files": [
-      "dist/**/*",
-      "dist-electron/**/*",
-      "package.json"
-    ],
-    "directories": {
-      "output": "release"
+    "version": "0.61.0",
+    "private": true,
+    "license": "MIT",
+    "packageManager": "pnpm@10.33.3",
+    "engines": {
+        "node": ">=20"
     },
-    "win": {
-      "target": "nsis",
-      "icon": "build/icon.ico"
+    "scripts": {
+        "compile": "pnpm -r compile",
+        "test": "vitest",
+        "build:schema": "pnpm run --prefix=xmcl-runtime-api build:schema",
+        "build": "pnpm run --prefix=xmcl-electron-app build",
+        "build:all": "pnpm run --prefix=xmcl-electron-app build:all",
+        "build:renderer": "pnpm --prefix=xmcl-keystone-ui build",
+        "build:docs": "tsx scripts/docs.ts",
+        "postsign": "pnpm run --prefix=xmcl-electron-app postsign",
+        "check": "pnpm run --prefix=xmcl-runtime-api check && pnpm run --prefix=xmcl-runtime check && pnpm run --prefix=xmcl-electron-app check && pnpm run --prefix=xmcl-keystone-ui check",
+        "dev:main": "pnpm run --prefix=xmcl-electron-app dev",
+        "dev:renderer": "pnpm run --prefix=xmcl-keystone-ui dev",
+        "lint": "oxlint -c ./.oxlintrc.json packages && pnpm run --prefix=xmcl-keystone-ui lint && pnpm run --prefix=xmcl-runtime lint && pnpm run --prefix=xmcl-runtime-api lint && pnpm run --prefix=xmcl-electron-app lint",
+        "i18n": "pnpm run --prefix=xmcl-keystone-ui i18n",
+        "lint:i18n": "pnpm run --prefix=xmcl-keystone-ui lint:i18n",
+        "i18n:remove": "pnpm run --prefix=xmcl-keystone-ui i18n:remove",
+        "i18n:rename": "pnpm run --prefix=xmcl-keystone-ui i18n:rename",
+        "i18n:daemon": "pnpm run --prefix=xmcl-keystone-ui i18n:daemon",
+        "lint:fix": "oxlint -c ./.oxlintrc.json packages --fix && pnpm run --prefix=xmcl-runtime-api lint:fix && pnpm run --prefix=xmcl-runtime lint:fix && pnpm run --prefix=xmcl-electron-app lint:fix && pnpm run --prefix=xmcl-keystone-ui lint:fix",
+        "format": "oxfmt -c ./.oxfmtrc.json packages --write",
+        "coverage": "vitest run --coverage",
+        "test:e2e": "pnpm --prefix=e2e test",
+        "test:e2e:smoke": "pnpm --prefix=e2e test:smoke",
+        "test:e2e:ui": "pnpm --prefix=e2e test:ui",
+        "test:e2e:scratch": "pnpm --prefix=e2e test:scratch",
+        "e2e:install": "pnpm --dir=e2e install --ignore-workspace",
+        "build:tutorial": "pnpm --prefix=e2e tutorial",
+        "gen:testids": "tsx scripts/gen-testids.ts"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+    "devDependencies": {
+        "@types/node": "^20.19.0",
+        "@vitest/coverage-v8": "^4.1.0",
+        "oxfmt": "^0.48.0",
+        "oxlint": "^1.63.0",
+        "tsx": "^4.21.0",
+        "typedoc": "^0.28.15",
+        "typescript": "^5.9.3",
+        "vitest": "^4.1.0"
     },
-    "linux": {
-      "target": "AppImage",
-      "icon": "build/icon.png"
-    },
-    "mac": {
-      "target": "dmg",
-      "icon": "build/icon.icns"
+    "pnpm": {
+        "onlyBuiltDependencies": [
+            "@parcel/watcher",
+            "cpu-features",
+            "electron",
+            "esbuild",
+            "node-datachannel",
+            "ssh2",
+            "vue-demi"
+        ],
+        "overrides": {
+            "postcss": ">=8.5.10",
+            "rolldown": "1.0.1"
+        }
     }
-  }
 }
