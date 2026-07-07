@@ -187,7 +187,7 @@
   background: var(--panel-raised);
   border: 1px solid var(--hairline-strong);
   border-radius: var(--radius-md);
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 30px rgba(var(--shadow-color), 0.15);
   padding: 8px;
   z-index: 30;
   animation: fall 0.14s ease;

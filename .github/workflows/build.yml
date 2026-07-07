@@ -20,6 +20,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "20"
+          cache: "npm"
 
       - name: Confirm project layout
         run: |
@@ -29,9 +30,13 @@ jobs:
             echo "::error::package.json not found at repo root. Is the Next.js project nested in a subfolder?"
             exit 1
           fi
+          if [ ! -f package-lock.json ]; then
+            echo "::error::package-lock.json not found. Run 'npm install' locally once and commit it."
+            exit 1
+          fi
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Type check
         run: npx tsc --noEmit

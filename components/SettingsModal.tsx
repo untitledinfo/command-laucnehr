@@ -5,9 +5,9 @@ import styles from "./SettingsModal.module.css";
 import { useToast } from "./ToastProvider";
 
 const accents = [
-  { id: "signal", label: "Phosphor", value: "#39ffc1", dim: "#1c8f6c" },
-  { id: "plasma", label: "Plasma", value: "#6c8cff", dim: "#3d4f96" },
-  { id: "warn", label: "Amber", value: "#ffb648", dim: "#8a6420" },
+  { id: "signal", label: "Emerald", value: "#147a53", dim: "#d3ecdf" },
+  { id: "plasma", label: "Slate", value: "#3b6ea5", dim: "#dbe7f2" },
+  { id: "warn", label: "Amber", value: "#a6690a", dim: "#f3e3cb" },
 ];
 
 export function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {

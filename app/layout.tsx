@@ -14,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" data-mode="dark">
+    <html lang="en" data-mode="light">
       <body>
         <div className="scan-bg" aria-hidden="true" />
         <ToastProvider>{children}</ToastProvider>

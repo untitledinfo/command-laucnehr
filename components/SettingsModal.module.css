@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 12, 0.72);
+  background: rgba(20, 32, 28, 0.32);
   backdrop-filter: blur(2px);
   z-index: 400;
   display: flex;
@@ -14,7 +14,7 @@
   background: var(--panel-raised);
   border: 1px solid var(--hairline-strong);
   border-radius: var(--radius-lg);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 16px 40px rgba(var(--shadow-color), 0.18);
   padding: 22px 24px;
   animation: drop 0.15s ease;
 }

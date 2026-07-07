@@ -1,20 +1,20 @@
 # Command Deck — a mission-control themed Minecraft launcher UI
 
 A Next.js 14 (App Router) + TypeScript rebuild of a Minecraft launcher home screen, redesigned around a
-"mission control dashboard" theme instead of a generic dark launcher look: an angular technical typeface,
-a phosphor-green telemetry accent, a HUD dial in place of a flat launch button, and monospace readouts
-for ping, player counts, FPS and memory — like a spacecraft console rather than a website.
+"daylight mission-control" theme: a clean, light instrument-panel palette instead of the usual dark
+gamer-launcher look, an angular technical typeface, a muted emerald accent, and a HUD dial in place of a
+flat launch button — restrained and legible rather than dark-and-neon.
 
 ## Design system
 
-- **Palette** — `--void` (#080b14) page background, `--panel` / `--panel-raised` for layered surfaces,
-  `--signal` (#39ffc1) as the primary telemetry accent, `--plasma` (#6c8cff) for secondary/informational
-  states, `--warn` (#ffb648) for attention states.
+- **Palette** — `--void` (#f3f6f4) soft page background, `--panel` (white) for cards, `--panel-inset`
+  for wells/inputs, a muted emerald `--signal` (#147a53) as the primary accent, a slate blue `--plasma`
+  for secondary/informational states, and a muted amber `--warn` for attention states. No neon, no glow.
 - **Type** — Chakra Petch (display/headings), Inter (body/UI), JetBrains Mono (all data readouts:
   versions, ping, FPS, memory, java args).
 - **Signature element** — the Launch Console: a circular HUD dial with tick marks and an animated
   progress ring that replaces the typical rectangular gradient "Play" button, with live telemetry
-  underneath it.
+  underneath it, rendered as a flat instrument gauge rather than a glowing sci-fi widget.
 
 Run `npm run dev` and open `http://localhost:3000`.
 

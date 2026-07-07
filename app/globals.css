@@ -1,22 +1,25 @@
 @import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap");
 
 :root {
-  --void: #080b14;
-  --panel: #10141f;
-  --panel-raised: #171c2b;
-  --panel-inset: #0c101a;
-  --hairline: #232a3d;
-  --hairline-strong: #313a54;
+  --void: #f3f6f4;
+  --panel: #ffffff;
+  --panel-raised: #ffffff;
+  --panel-inset: #eef2f0;
+  --hairline: #e1e7e4;
+  --hairline-strong: #c9d3ce;
 
-  --signal: #39ffc1;
-  --signal-dim: #1c8f6c;
-  --plasma: #6c8cff;
-  --plasma-dim: #3d4f96;
-  --warn: #ffb648;
+  --signal: #147a53;
+  --signal-dim: #d3ecdf;
+  --plasma: #3b6ea5;
+  --plasma-dim: #dbe7f2;
+  --warn: #a6690a;
+  --warn-dim: #f3e3cb;
 
-  --text-hi: #eaf0ff;
-  --text-mid: #8d95ac;
-  --text-low: #565e77;
+  --text-hi: #142420;
+  --text-mid: #5b6b67;
+  --text-low: #93a19d;
+
+  --shadow-color: 20, 32, 28;
 
   --font-display: "Chakra Petch", "Inter", sans-serif;
   --font-body: "Inter", sans-serif;
@@ -83,7 +86,7 @@ button {
   outline-offset: 2px;
 }
 
-/* ambient mission-control scanline atmosphere */
+/* ambient mission-control grid, kept faint and static (no neon sweep) */
 .scan-bg {
   position: fixed;
   inset: 0;
@@ -95,35 +98,11 @@ button {
     ),
     linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
   background-size: 42px 42px;
-  opacity: 0.05;
-}
-
-.scan-bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    rgba(57, 255, 193, 0.04) 50%,
-    transparent 100%
-  );
-  animation: sweep 7s linear infinite;
-}
-
-@keyframes sweep {
-  0% {
-    transform: translateY(-100%);
-  }
-  100% {
-    transform: translateY(100%);
-  }
+  opacity: 0.35;
+  mask-image: linear-gradient(180deg, black, transparent 70%);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scan-bg::after {
-    animation: none;
-  }
   * {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
