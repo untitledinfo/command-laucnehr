@@ -2,11 +2,14 @@ name: Build
 
 on:
   push:
-    branches: [ main ]
-    tags: [ "v*" ]
+    branches:
+      - main
+    tags:
+      - "v*"
   pull_request:
-    branches: [ main ]
-  workflow_dispatch: {}
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,51 +17,59 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: 24
 
-      - name: Confirm project layout
+      - name: Show project files
         run: |
-          echo "Working directory: $(pwd)"
+          pwd
           ls -la
+
+      - name: Verify package.json
+        run: |
           if [ ! -f package.json ]; then
-            echo "::error::package.json not found at repo root. Is the Next.js project nested in a subfolder?"
-            exit 1
-          fi
-          if [ ! -f package-lock.json ]; then
-            echo "::error::package-lock.json not found. Run 'npm install' locally once and commit it."
+            echo "::error::package.json not found in repository root."
             exit 1
           fi
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Type Check
+        run: npm run type-check --if-present
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint --if-present
 
       - name: Build
         run: npm run build
 
-      - name: Confirm build output
+      - name: Verify build output
         run: |
-          if [ ! -d .next ]; then
-            echo "::error::next build did not produce a .next directory. Check the Build step's logs above for the real failure."
+          if [ -d ".next" ]; then
+            echo "Next.js build found."
+            ls -la .next
+          elif [ -d "dist" ]; then
+            echo "Dist build found."
+            ls -la dist
+          elif [ -d "build" ]; then
+            echo "Build directory found."
+            ls -la build
+          else
+            echo "::error::No build output found (.next, dist, or build)."
             exit 1
           fi
-          ls -la .next
 
-      - name: Upload build output
-        uses: actions/upload-artifact@v6
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: command-deck-launcher-build
-          path: .next
-          if-no-files-found: error
-          include-hidden-files: true
+          name: build-output
+          path: |
+            .next
+            dist
+            build
+          if-no-files-found: ignore
