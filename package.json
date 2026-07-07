@@ -1,63 +1,50 @@
 {
-    "version": "0.61.0",
-    "private": true,
-    "license": "MIT",
-    "packageManager": "pnpm@10.33.3",
-    "engines": {
-        "node": ">=20"
+  "name": "command-launcher",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Command Launcher — premium Minecraft launcher UI (Next.js + Electron)",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "electron:dev": "concurrently -k \"npm:dev\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron:build": "next build && electron-builder"
+  },
+  "dependencies": {
+    "next": "15.5.20",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "framer-motion": "11.11.17",
+    "lucide-react": "0.454.0",
+    "clsx": "2.1.1",
+    "tailwind-merge": "2.5.4"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@types/node": "22.9.0",
+    "tailwindcss": "3.4.14",
+    "postcss": "8.4.49",
+    "autoprefixer": "10.4.20",
+    "electron": "33.2.0",
+    "electron-builder": "25.1.8",
+    "concurrently": "9.0.1",
+    "wait-on": "8.0.1"
+  },
+  "build": {
+    "appId": "com.pgc.commandlauncher",
+    "productName": "Command Launcher",
+    "files": [
+      "out/**/*",
+      "electron/**/*"
+    ],
+    "directories": {
+      "output": "dist"
     },
-    "scripts": {
-        "compile": "pnpm -r compile",
-        "test": "vitest",
-        "build:schema": "pnpm run --prefix=xmcl-runtime-api build:schema",
-        "build": "pnpm run --prefix=xmcl-electron-app build",
-        "build:all": "pnpm run --prefix=xmcl-electron-app build:all",
-        "build:renderer": "pnpm --prefix=xmcl-keystone-ui build",
-        "build:docs": "tsx scripts/docs.ts",
-        "postsign": "pnpm run --prefix=xmcl-electron-app postsign",
-        "check": "pnpm run --prefix=xmcl-runtime-api check && pnpm run --prefix=xmcl-runtime check && pnpm run --prefix=xmcl-electron-app check && pnpm run --prefix=xmcl-keystone-ui check",
-        "dev:main": "pnpm run --prefix=xmcl-electron-app dev",
-        "dev:renderer": "pnpm run --prefix=xmcl-keystone-ui dev",
-        "lint": "oxlint -c ./.oxlintrc.json packages && pnpm run --prefix=xmcl-keystone-ui lint && pnpm run --prefix=xmcl-runtime lint && pnpm run --prefix=xmcl-runtime-api lint && pnpm run --prefix=xmcl-electron-app lint",
-        "i18n": "pnpm run --prefix=xmcl-keystone-ui i18n",
-        "lint:i18n": "pnpm run --prefix=xmcl-keystone-ui lint:i18n",
-        "i18n:remove": "pnpm run --prefix=xmcl-keystone-ui i18n:remove",
-        "i18n:rename": "pnpm run --prefix=xmcl-keystone-ui i18n:rename",
-        "i18n:daemon": "pnpm run --prefix=xmcl-keystone-ui i18n:daemon",
-        "lint:fix": "oxlint -c ./.oxlintrc.json packages --fix && pnpm run --prefix=xmcl-runtime-api lint:fix && pnpm run --prefix=xmcl-runtime lint:fix && pnpm run --prefix=xmcl-electron-app lint:fix && pnpm run --prefix=xmcl-keystone-ui lint:fix",
-        "format": "oxfmt -c ./.oxfmtrc.json packages --write",
-        "coverage": "vitest run --coverage",
-        "test:e2e": "pnpm --prefix=e2e test",
-        "test:e2e:smoke": "pnpm --prefix=e2e test:smoke",
-        "test:e2e:ui": "pnpm --prefix=e2e test:ui",
-        "test:e2e:scratch": "pnpm --prefix=e2e test:scratch",
-        "e2e:install": "pnpm --dir=e2e install --ignore-workspace",
-        "build:tutorial": "pnpm --prefix=e2e tutorial",
-        "gen:testids": "tsx scripts/gen-testids.ts"
-    },
-    "devDependencies": {
-        "@types/node": "^20.19.0",
-        "@vitest/coverage-v8": "^4.1.0",
-        "oxfmt": "^0.48.0",
-        "oxlint": "^1.63.0",
-        "tsx": "^4.21.0",
-        "typedoc": "^0.28.15",
-        "typescript": "^5.9.3",
-        "vitest": "^4.1.0"
-    },
-    "pnpm": {
-        "onlyBuiltDependencies": [
-            "@parcel/watcher",
-            "cpu-features",
-            "electron",
-            "esbuild",
-            "node-datachannel",
-            "ssh2",
-            "vue-demi"
-        ],
-        "overrides": {
-            "postcss": ">=8.5.10",
-            "rolldown": "1.0.1"
-        }
-    }
+    "win": { "target": "nsis" },
+    "linux": { "target": "AppImage" }
+  }
 }
