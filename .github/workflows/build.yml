@@ -21,6 +21,15 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Confirm project layout
+        run: |
+          echo "Working directory: $(pwd)"
+          ls -la
+          if [ ! -f package.json ]; then
+            echo "::error::package.json not found at repo root. Is the Next.js project nested in a subfolder?"
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm install
 
@@ -32,6 +41,14 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Confirm build output
+        run: |
+          if [ ! -d .next ]; then
+            echo "::error::next build did not produce a .next directory. Check the Build step's logs above for the real failure."
+            exit 1
+          fi
+          ls -la .next
 
       - name: Upload build output
         uses: actions/upload-artifact@v6
