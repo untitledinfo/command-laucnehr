@@ -1,0 +1,52 @@
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 22px;
+  background: var(--panel);
+  border-top: 1px solid var(--hairline);
+  font-size: 11.5px;
+  color: var(--text-mid);
+  flex-wrap: wrap;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.memLabel {
+  color: var(--text-low);
+}
+
+.memBar {
+  width: 70px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--panel-inset);
+  border: 1px solid var(--hairline);
+  overflow: hidden;
+}
+
+.memFill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
+}
+
+@media (max-width: 640px) {
+  .footer {
+    gap: 12px;
+    font-size: 10.5px;
+  }
+}
