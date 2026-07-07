@@ -1,51 +1,60 @@
 <template>
-  <div class="overlay" @click.self="$emit('close')">
-    <div class="dialog glass-panel">
-      <div class="dialog-header">
-        <h3>Accounts</h3>
-        <button class="close-btn" @click="$emit('close')">&#10005;</button>
-      </div>
-
-      <div class="account-list">
-        <div
-          v-for="acc in store.accounts"
-          :key="acc.uuid"
-          class="account-row"
-          :class="{ active: acc.uuid === store.activeAccount?.uuid }"
-          @click="select(acc.uuid)"
-        >
-          <div class="avatar">{{ acc.name.slice(0, 1).toUpperCase() }}</div>
-          <div class="account-info">
-            <div class="account-name">{{ acc.name }}</div>
-            <div class="account-type">{{ acc.type === 'msa' ? 'Microsoft' : 'Offline' }}</div>
-          </div>
-          <button class="remove-btn" @click.stop="remove(acc.uuid)">Remove</button>
+  <Transition name="dialog-fade">
+    <div class="overlay" @click.self="$emit('close')">
+      <div class="dialog glass-panel pop-in">
+        <div class="dialog-header">
+          <h3>Accounts</h3>
+          <button class="close-btn" @click="$emit('close')">&#10005;</button>
         </div>
-        <div v-if="store.accounts.length === 0" class="empty">No accounts yet.</div>
-      </div>
 
-      <div class="add-row">
-        <input v-model="offlineName" placeholder="Offline username" @keyup.enter="addOffline" />
-        <button class="secondary" @click="addOffline">+ Add Offline</button>
-      </div>
-
-      <div class="msa-row">
-        <button class="secondary" :disabled="loggingIn" @click="loginMsa">
-          {{ loggingIn ? 'Waiting for sign-in...' : 'Sign in with Microsoft' }}
-        </button>
-        <div v-if="deviceCode" class="device-code">
-          Go to <a href="#" @click.prevent="openLink">{{ deviceCode.verificationUri }}</a> and enter code:
-          <strong>{{ deviceCode.userCode }}</strong>
+        <div class="account-list">
+          <TransitionGroup name="list">
+            <div
+              v-for="acc in store.accounts"
+              :key="acc.uuid"
+              class="account-row"
+              :class="{ active: acc.uuid === store.activeAccount?.uuid }"
+              @click="select(acc.uuid)"
+            >
+              <div class="avatar" :style="{ background: gradientFor(acc.name) }">{{ acc.name.slice(0, 1).toUpperCase() }}</div>
+              <div class="account-info">
+                <div class="account-name">{{ acc.name }}</div>
+                <div class="account-type">{{ acc.type === 'msa' ? 'Microsoft' : 'Offline' }}</div>
+              </div>
+              <span v-if="acc.uuid === store.activeAccount?.uuid" class="badge">Active</span>
+              <button class="remove-btn" @click.stop="remove(acc.uuid)">Remove</button>
+            </div>
+          </TransitionGroup>
+          <div v-if="store.accounts.length === 0" class="empty">No accounts yet &mdash; add one below.</div>
         </div>
-        <div v-if="msaError" class="msa-error">{{ msaError }}</div>
+
+        <div class="add-row">
+          <input v-model="offlineName" placeholder="Offline username" @keyup.enter="addOffline" />
+          <button class="btn" @click="addOffline">+ Add Offline</button>
+        </div>
+
+        <div class="msa-row">
+          <button class="btn" :disabled="loggingIn" @click="loginMsa">
+            <span v-if="loggingIn" class="mini-spinner"></span>
+            {{ loggingIn ? 'Waiting for sign-in...' : 'Sign in with Microsoft' }}
+          </button>
+          <Transition name="fade-scale">
+            <div v-if="deviceCode" class="device-code">
+              Go to <a href="#" @click.prevent="openLink">{{ deviceCode.verificationUri }}</a> and enter code:
+              <strong>{{ deviceCode.userCode }}</strong>
+            </div>
+          </Transition>
+          <div v-if="msaError" class="msa-error">{{ msaError }}</div>
+        </div>
       </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue';
 import { useLauncherStore } from '../stores/launcher';
+import { toast } from '../lib/toast';
 
 defineEmits<{ close: [] }>();
 const store = useLauncherStore();
@@ -57,12 +66,21 @@ const msaError = ref('');
 
 let unsub: (() => void) | null = null;
 
+function gradientFor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffff;
+  const h1 = hash % 360;
+  const h2 = (h1 + 60) % 360;
+  return `linear-gradient(135deg, hsl(${h1}, 80%, 62%), hsl(${h2}, 80%, 58%))`;
+}
+
 async function addOffline() {
   const name = offlineName.value.trim();
   if (!name) return;
   await window.launcherApi.accounts.addOffline(name);
   offlineName.value = '';
   await store.refreshAccounts();
+  toast.success('Account added', name);
 }
 
 async function select(uuid: string) {
@@ -73,6 +91,7 @@ async function select(uuid: string) {
 async function remove(uuid: string) {
   await window.launcherApi.accounts.remove(uuid);
   await store.refreshAccounts();
+  toast.info('Account removed');
 }
 
 async function loginMsa() {
@@ -85,8 +104,10 @@ async function loginMsa() {
   try {
     await window.launcherApi.accounts.loginMsa();
     await store.refreshAccounts();
+    toast.success('Signed in with Microsoft');
   } catch (e: any) {
     msaError.value = e.message ?? String(e);
+    toast.error('Sign-in failed', msaError.value);
   } finally {
     loggingIn.value = false;
     deviceCode.value = null;
@@ -105,15 +126,16 @@ onUnmounted(() => unsub?.());
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(4, 4, 8, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 100;
+  backdrop-filter: blur(3px);
 }
 .dialog {
   width: 420px;
-  max-height: 70vh;
+  max-height: 74vh;
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -133,6 +155,9 @@ onUnmounted(() => unsub?.());
   color: var(--text-dim);
   font-size: 14px;
 }
+.close-btn:hover {
+  color: var(--text);
+}
 .account-list {
   display: flex;
   flex-direction: column;
@@ -148,19 +173,19 @@ onUnmounted(() => unsub?.());
   border-radius: 10px;
   cursor: pointer;
   border: 1px solid transparent;
+  transition: border-color var(--dur-fast) ease, background var(--dur-fast) ease;
 }
 .account-row:hover {
   background: var(--bg-panel-light);
 }
 .account-row.active {
   border-color: var(--accent);
-  background: rgba(139, 92, 246, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 .avatar {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -203,21 +228,19 @@ onUnmounted(() => unsub?.());
 .add-row input {
   flex: 1 1 auto;
 }
-button.secondary {
-  background: var(--bg-panel-light);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  padding: 8px 12px;
-  font-size: 13px;
-}
-button.secondary:hover {
-  border-color: var(--accent);
-}
 .msa-row {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.mini-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--text);
+  animation: spin 0.7s linear infinite;
 }
 .device-code {
   font-size: 12px;
@@ -227,5 +250,31 @@ button.secondary:hover {
 .msa-error {
   font-size: 12px;
   color: var(--error);
+}
+
+.dialog-fade-enter-active,
+.dialog-fade-leave-active {
+  transition: opacity var(--dur-fast) ease;
+}
+.dialog-fade-enter-from,
+.dialog-fade-leave-to {
+  opacity: 0;
+}
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: opacity var(--dur-fast) ease;
+}
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+}
+.list-enter-active,
+.list-leave-active {
+  transition: opacity var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(-6px);
 }
 </style>

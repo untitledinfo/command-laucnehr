@@ -30,7 +30,7 @@
     "vue-tsc": "^2.0.11"
   },
   "build": {
-    "appId": "fun.pgcmc.commandlauncher",
+    "appId": "com.commandlauncher.app",
     "productName": "Command Launcher",
     "files": [
       "dist/**/*",
