@@ -1,0 +1,112 @@
+:root {
+  --bg-darkest: #0b0b12;
+  --bg-dark: #12121a;
+  --bg-panel: #181822;
+  --bg-panel-light: #20202c;
+  --border: #2b2b3a;
+  --accent: #8b5cf6;
+  --accent-2: #22d3ee;
+  --accent-soft: #a78bfa;
+  --text: #eaeaf5;
+  --text-dim: #9494a8;
+  --success: #34d399;
+  --error: #f87171;
+  --launch-green: #3dd668;
+  --launch-green-2: #1fa653;
+  --chip-1: #f5a623;
+  --chip-2: #e03a3a;
+  --chip-3: #2bc47e;
+  --chip-4: #5b6ae0;
+
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font-body: 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Segoe UI Semibold', 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--bg-darkest);
+  overflow: hidden;
+  user-select: none;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-soft);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.glass-panel {
+  background: linear-gradient(180deg, rgba(32, 32, 44, 0.72), rgba(24, 24, 34, 0.72));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.accent-gradient-text {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-panel-light);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+a {
+  color: var(--accent-soft);
+}

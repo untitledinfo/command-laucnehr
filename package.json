@@ -1,50 +1,74 @@
 {
   "name": "command-launcher",
-  "version": "0.1.0",
+  "version": "1.0.0",
+  "description": "Command Launcher - a Lunar/Feather-styled Minecraft launcher",
   "private": true,
-  "description": "Command Launcher — premium Minecraft launcher UI (Next.js + Electron)",
-  "main": "electron/main.js",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "electron:dev": "concurrently -k \"npm:dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "next build && electron-builder"
+    "dev": "vite",
+    "build:renderer": "vue-tsc --noEmit && vite build",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build": "npm run build:renderer && npm run build:electron",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win --x64 --ia32",
+    "dist:win64": "npm run build && electron-builder --win --x64",
+    "dist:win32": "npm run build && electron-builder --win --ia32",
+    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64",
+    "dist:linux": "npm run build && electron-builder --linux --x64",
+    "electron": "electron ."
   },
   "dependencies": {
-    "next": "15.5.20",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "framer-motion": "11.11.17",
-    "lucide-react": "0.454.0",
-    "clsx": "2.1.1",
-    "tailwind-merge": "2.5.4"
+    "adm-zip": "^0.5.10",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.21",
+    "vue-router": "^4.3.0"
   },
   "devDependencies": {
-    "typescript": "5.6.3",
-    "@types/react": "18.3.12",
-    "@types/react-dom": "18.3.1",
-    "@types/node": "22.9.0",
-    "tailwindcss": "3.4.14",
-    "postcss": "8.4.49",
-    "autoprefixer": "10.4.20",
-    "electron": "33.2.0",
-    "electron-builder": "25.1.8",
-    "concurrently": "9.0.1",
-    "wait-on": "8.0.1"
+    "@types/adm-zip": "^0.5.5",
+    "@types/node": "^20.12.7",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "electron": "^30.0.1",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.8",
+    "vue-tsc": "^2.0.11"
   },
   "build": {
-    "appId": "com.pgc.commandlauncher",
+    "appId": "fun.pgcmc.commandlauncher",
     "productName": "Command Launcher",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "files": [
-      "out/**/*",
-      "electron/**/*"
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
     ],
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
-    "win": { "target": "nsis" },
-    "linux": { "target": "AppImage" }
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64", "ia32"] }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.png",
+      "category": "Game"
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] }
+      ],
+      "icon": "build/icon.icns",
+      "identity": null
+    }
   }
 }
